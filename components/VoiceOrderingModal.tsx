@@ -163,12 +163,166 @@ export default function VoiceOrderingModal({ isOpen, onClose, menuItems }: Voice
                 scriptProcessorRef.current = null;
             }
             if (inputAudioContextRef.current) {
-                await inputAudioContextRef.current.close();
+                await inputAudioContextRef.current.close().catch(console.error);
                 inputAudioContextRef.current = null;
             }
             if (outputAudioContextRef.current) {
-                await outputAudioContextRef.current.close();
+                await outputAudioContextRef.current.close().catch(console.error);
                 outputAudioContextRef.current = null;
             }
             sourcesRef.current.forEach(source => source.stop());
-            sourcesRef.current.
+            sourcesRef.current.clear();
+        };
+
+        const start = async () => {
+            setStatus('Getting microphone...');
+            try {
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const menuAsText = menuItems.map(item => `- ${item.name} (${item.isAvailable ? 'Available' : 'Unavailable'})`).join('\n');
+                
+                inputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+                outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+                
+                let currentInputTranscription = '';
+                let currentOutputTranscription = '';
+
+                sessionPromiseRef.current = ai.live.connect({
+                    model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                    callbacks: {
+                        onopen: async () => {
+                            if (isCancelled) return;
+                            setStatus('Listening...');
+                            mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            const source = inputAudioContextRef.current!.createMediaStreamSource(mediaStreamRef.current);
+                            scriptProcessorRef.current = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
+                            scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
+                                const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                                const pcmBlob = createBlob(inputData);
+                                sessionPromiseRef.current?.then((session) => {
+                                    session.sendRealtimeInput({ media: pcmBlob });
+                                });
+                            };
+                            source.connect(scriptProcessorRef.current);
+                            scriptProcessorRef.current.connect(inputAudioContextRef.current!.destination);
+                        },
+                        onmessage: async (message: LiveServerMessage) => {
+                             if (message.serverContent?.inputTranscription) {
+                                currentInputTranscription += message.serverContent.inputTranscription.text;
+                            }
+                             if (message.serverContent?.outputTranscription) {
+                                currentOutputTranscription += message.serverContent.outputTranscription.text;
+                            }
+                             if (message.serverContent?.turnComplete) {
+                                if (currentInputTranscription.trim()) {
+                                    setTranscript(prev => [...prev, { speaker: 'user', text: currentInputTranscription.trim() }]);
+                                }
+                                if (currentOutputTranscription.trim()) {
+                                    setTranscript(prev => [...prev, { speaker: 'chef', text: currentOutputTranscription.trim() }]);
+                                }
+                                currentInputTranscription = '';
+                                currentOutputTranscription = '';
+                            }
+
+                            if (message.toolCall) {
+                                for (const fc of message.toolCall.functionCalls) {
+                                    const apiResponse = handleFunctionCall(fc.name, fc.args);
+                                    sessionPromiseRef.current?.then((session) => {
+                                        session.sendToolResponse({ functionResponses: { id: fc.id, name: fc.name, response: apiResponse } });
+                                    });
+                                }
+                            }
+
+                            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
+                            if (base64Audio) {
+                                const audioCtx = outputAudioContextRef.current!;
+                                nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioCtx.currentTime);
+                                const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
+                                const source = audioCtx.createBufferSource();
+                                source.buffer = audioBuffer;
+                                source.connect(audioCtx.destination);
+                                source.addEventListener('ended', () => { sourcesRef.current.delete(source); });
+                                source.start(nextStartTimeRef.current);
+                                nextStartTimeRef.current += audioBuffer.duration;
+                                sourcesRef.current.add(source);
+                            }
+                        },
+                        onerror: (e: ErrorEvent) => {
+                            console.error('Session error:', e);
+                            setStatus(`Error: ${e.message}`);
+                            cleanup();
+                        },
+                        onclose: () => {
+                            console.log('Session closed.');
+                            if (!isCancelled) setStatus('Connection closed.');
+                        },
+                    },
+                    config: {
+                        responseModalities: [Modality.AUDIO],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
+                        inputAudioTranscription: {},
+                        outputAudioTranscription: {},
+                        systemInstruction: `You are a helpful voice assistant for "Potato & Friends". Guide the user in ordering food. The menu is below. Use the 'addToCart' function when the user confirms their order. Be conversational and friendly. Menu:\n${menuAsText}`,
+                        tools: [{ functionDeclarations: [addToCartFunction] }],
+                    },
+                });
+
+                await sessionPromiseRef.current;
+
+            } catch (err: any) {
+                if (!isCancelled) {
+                    console.error("Failed to start voice session:", err);
+                    setStatus(`Error: ${err.message}`);
+                    cleanup();
+                }
+            }
+        };
+
+        start();
+
+        return () => {
+            isCancelled = true;
+            cleanup();
+        };
+    }, [isOpen, menuItems, addToCart, handleFunctionCall]);
+
+    useEffect(() => {
+        transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [transcript]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <header className="flex justify-between items-center p-4 border-b">
+                    <h2 className="text-xl font-bold text-orange-600">Voice Ordering</h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800" aria-label="Close"><CloseIcon /></button>
+                </header>
+                <div className="flex-grow p-4 overflow-y-auto bg-gray-50 space-y-4">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                        <p><strong>Try saying:</strong></p>
+                        <ul className="list-disc pl-5 mt-1">
+                            <li>"I'd like to order the Spicy Volcano Fries."</li>
+                            <li>"Add two Classic Cheesy Fries to my cart."</li>
+                        </ul>
+                    </div>
+                    {transcript.map((item, index) => (
+                        <div key={index} className={`flex items-end gap-2 ${item.speaker === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {item.speaker === 'chef' && <div className="w-8 h-8 rounded-full bg-green-800 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">C</div>}
+                            <div className={`max-w-[80%] p-3 rounded-2xl shadow-sm ${item.speaker === 'user' ? 'bg-orange-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
+                                <p className="whitespace-pre-wrap">{item.text}</p>
+                            </div>
+                        </div>
+                    ))}
+                    <div ref={transcriptEndRef} />
+                </div>
+                <footer className="p-4 bg-white border-t text-center">
+                    <div className="flex justify-center mb-2">
+                         <MicIcon isListening={status === 'Listening...'} />
+                    </div>
+                    <p className="font-semibold text-gray-700 h-6">{status}</p>
+                </footer>
+            </div>
+        </div>
+    );
+}
