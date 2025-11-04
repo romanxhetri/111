@@ -1,0 +1,5 @@
+{
+  "name": "Potato and Friends Restaurant",
+  "description": "A modern, interactive menu and ordering platform for the 'Potato and Friends' fast food restaurant, built with React, TypeScript, and Tailwind CSS.",
+  "requestFramePermissions": []
+}

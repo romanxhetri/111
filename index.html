@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Potato and Friends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: 'Quicksand', sans-serif;
+      }
+      /* Custom scrollbar for a more polished look */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #fb923c; /* orange-400 */
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #f97316; /* orange-500 */
+      }
+
+      /* Custom Animations */
+      @keyframes glow {
+        0%, 100% { box-shadow: 0 0 15px rgba(249, 115, 22, 0.4); }
+        50% { box-shadow: 0 0 25px rgba(249, 115, 22, 0.7); }
+      }
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-glow {
+        animation: glow 2.5s infinite ease-in-out;
+      }
+      .animate-fadeInUp {
+        animation: fadeInUp 0.5s ease-out forwards;
+        opacity: 0; /* Start hidden */
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0"
+  }
+}
+</script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: {
+              100: '#FFF7ED',
+            },
+            orange: {
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+            },
+            green: {
+              800: '#166534',
+              900: '#14532d',
+            }
+          },
+          boxShadow: {
+            'glow': '0 0 15px rgba(249, 115, 22, 0.4)',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
