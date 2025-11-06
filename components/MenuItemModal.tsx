@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { GoogleGenAI, Type } from '@google/genai';
 import { type MenuItem, type SelectedCustomization, type CustomizationCategory, type CustomizationOption, type Review, type User, NutritionalInfo } from '../types';
 import { useCart } from '../contexts/CartContext';
 import DietaryIcon from './icons/DietaryIcon';
@@ -33,11 +32,6 @@ export default function MenuItemModal({ item, onClose, aiImage, currentUser, onR
     const [newComment, setNewComment] = useState('');
     const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-    // Nutritional info state
-    const [nutritionalInfo, setNutritionalInfo] = useState<NutritionalInfo | null>(item?.nutritionalInfo || null);
-    const [isGeneratingNutrition, setIsGeneratingNutrition] = useState(false);
-    const [nutritionError, setNutritionError] = useState('');
-
     useEffect(() => {
         if (item) {
             setQuantity(1);
@@ -45,8 +39,6 @@ export default function MenuItemModal({ item, onClose, aiImage, currentUser, onR
             setActiveTab('info');
             setNewRating(0);
             setNewComment('');
-            setNutritionalInfo(item.nutritionalInfo || null);
-            setNutritionError('');
             
             const handleEscape = (event: KeyboardEvent) => {
                 if (event.key === 'Escape') {
@@ -109,42 +101,6 @@ export default function MenuItemModal({ item, onClose, aiImage, currentUser, onR
             setNewComment('');
             setIsSubmittingReview(false);
         }, 1000);
-    };
-
-    const handleGenerateNutrition = async () => {
-        setIsGeneratingNutrition(true);
-        setNutritionError('');
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: `Based on the item name "${item.name}" and description "${item.description}", provide an estimated nutritional breakdown.`,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            calories: { type: Type.STRING, description: 'Estimated calories, e.g., "450-550 kcal"' },
-                            protein: { type: Type.STRING, description: 'Estimated protein in grams, e.g., "15g"' },
-                            carbs: { type: Type.STRING, description: 'Estimated carbohydrates in grams, e.g., "40g"' },
-                            fat: { type: Type.STRING, description: 'Estimated fat in grams, e.g., "25g"' },
-                        },
-                        required: ["calories", "protein", "carbs", "fat"],
-                    },
-                },
-            });
-
-            const info = JSON.parse(response.text.trim());
-            setNutritionalInfo(info);
-            // Cache the result on the main menu item state
-            onUpdateMenu({ ...item, nutritionalInfo: info });
-
-        } catch (err) {
-            console.error(err);
-            setNutritionError('Could not generate nutritional info at this time.');
-        } finally {
-            setIsGeneratingNutrition(false);
-        }
     };
 
     return (
@@ -216,22 +172,16 @@ export default function MenuItemModal({ item, onClose, aiImage, currentUser, onR
                                     </div>
                                 )}
                                 <div className="p-4 bg-gray-50 rounded-lg">
-                                    <h4 className="font-bold text-gray-800 mb-2">Nutritional Information (AI Est.)</h4>
-                                    {nutritionalInfo ? (
+                                    <h4 className="font-bold text-gray-800 mb-2">Nutritional Information</h4>
+                                    {item.nutritionalInfo ? (
                                         <div className="grid grid-cols-2 gap-2 text-sm">
-                                            <p><strong>Calories:</strong> {nutritionalInfo.calories}</p>
-                                            <p><strong>Protein:</strong> {nutritionalInfo.protein}</p>
-                                            <p><strong>Carbs:</strong> {nutritionalInfo.carbs}</p>
-                                            <p><strong>Fat:</strong> {nutritionalInfo.fat}</p>
+                                            <p><strong>Calories:</strong> {item.nutritionalInfo.calories}</p>
+                                            <p><strong>Protein:</strong> {item.nutritionalInfo.protein}</p>
+                                            <p><strong>Carbs:</strong> {item.nutritionalInfo.carbs}</p>
+                                            <p><strong>Fat:</strong> {item.nutritionalInfo.fat}</p>
                                         </div>
                                     ) : (
-                                        <>
-                                            <p className="text-sm text-gray-500 mb-3">Click to generate an estimated nutritional breakdown.</p>
-                                            <button onClick={handleGenerateNutrition} disabled={isGeneratingNutrition} className="w-full text-sm bg-green-100 text-green-800 font-semibold py-2 px-4 rounded-lg hover:bg-green-200 transition disabled:opacity-50">
-                                                {isGeneratingNutrition ? 'Analyzing...' : 'Generate Info'}
-                                            </button>
-                                            {nutritionError && <p className="text-red-500 text-sm mt-2">{nutritionError}</p>}
-                                        </>
+                                        <p className="text-sm text-gray-500">Nutritional information is not available for this item.</p>
                                     )}
                                 </div>
                             </>

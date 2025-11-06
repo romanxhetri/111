@@ -8,21 +8,12 @@ import StarRating from './StarRating';
 interface MenuItemCardProps {
   item: MenuItem;
   onSelect: (item: MenuItem) => void;
-  aiImage?: string;
-  isAiImageLoading?: boolean;
   isAdmin?: boolean;
   onToggleAvailability?: (itemId: number) => void;
   style?: React.CSSProperties;
 }
 
-const ImagePlaceholder = () => (
-    <div className="w-full h-48 bg-gray-200 animate-pulse flex items-center justify-center">
-        <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" /></svg>
-    </div>
-);
-
-
-const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onSelect, aiImage, isAiImageLoading, isAdmin, onToggleAvailability, style }) => {
+const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onSelect, isAdmin, onToggleAvailability, style }) => {
   const { addToCart } = useCart();
   
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -46,11 +37,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onSelect, aiImage, is
       aria-label={`View details for ${item.name}`}
     >
       <div className="relative">
-        {isAiImageLoading ? (
-            <ImagePlaceholder />
-        ) : (
-            <img src={aiImage || item.image} alt={item.name} className="w-full h-48 object-cover" loading="lazy" />
-        )}
+        <img src={item.image} alt={item.name} className="w-full h-48 object-cover" loading="lazy" />
         {!item.isAvailable && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                 <span className="text-white text-lg font-bold">Unavailable</span>

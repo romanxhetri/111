@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { MenuItem } from '../types';
 
 interface AskChefModalProps {
@@ -20,29 +19,15 @@ const SparklesIcon = () => (
     </svg>
 );
 
-const MapPinIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 20l-4.95-5.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-    </svg>
-);
-
-
 export default function AskChefModal({ isOpen, onClose, menuItems }: AskChefModalProps): React.ReactElement | null {
     const [query, setQuery] = useState('');
     const [response, setResponse] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const modalRef = useRef<HTMLDivElement>(null);
-    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-    const [mapLinks, setMapLinks] = useState<{ title: string, uri: string }[]>([]);
 
     useEffect(() => {
         if (isOpen) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => { setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude }); },
-                (err) => { console.warn(`Geolocation error: ${err.message}`); setUserLocation(null); }
-            );
-
             const handleEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
             document.addEventListener('keydown', handleEscape);
             return () => document.removeEventListener('keydown', handleEscape);
@@ -57,46 +42,12 @@ export default function AskChefModal({ isOpen, onClose, menuItems }: AskChefModa
         setIsLoading(true);
         setResponse('');
         setError('');
-        setMapLinks([]);
 
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const menuAsText = menuItems
-                .filter(item => item.isAvailable)
-                .map(item => `- ${item.name}: ${item.description} (Price: $${item.price}, Tags: ${item.dietaryTags.join(', ') || 'none'}, Rating: ${item.averageRating.toFixed(1)}/5 from ${item.reviewCount} reviews)`)
-                .join('\n');
-                
-            const prompt = `You are 'Chef Potato', the friendly and knowledgeable head chef at "Potato & Friends" restaurant. A customer is asking for a recommendation. Your menu is provided below, including ratings. You can also answer questions about the restaurant's location. Based *only* on the menu items for food questions, provide a warm, helpful, and concise recommendation. Consider the customer's query and the item ratings. Address the customer directly. If the query is unrelated to food or your location, politely state that you can only help with food and location recommendations.
+        // Simulate a network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-Here is the current menu:
-${menuAsText}
-
-Customer's question: "${query}"
-
-Your recommendation:`;
-
-            const config: any = { tools: [{ googleMaps: {} }] };
-
-            if (userLocation) {
-                config.toolConfig = { retrievalConfig: { latLng: { latitude: userLocation.latitude, longitude: userLocation.longitude }}};
-            }
-
-            const result = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config });
-            
-            setResponse(result.text);
-
-            const chunks = result.candidates?.[0]?.groundingMetadata?.groundingChunks;
-            if (chunks) {
-                const newMapLinks = chunks.filter((c: any) => c.maps).map((c: any) => ({ title: c.maps.title, uri: c.maps.uri }));
-                setMapLinks(newMapLinks);
-            }
-
-        } catch (e) {
-            console.error(e);
-            setError('Sorry, I had a little trouble in the kitchen. Please try asking again!');
-        } finally {
-            setIsLoading(false);
-        }
+        setResponse("Chef Potato is currently taking a break! Please check our menu for delicious options.");
+        setIsLoading(false);
     }
 
     return (
@@ -150,17 +101,7 @@ Your recommendation:`;
                         )}
                         {error && <p className="text-red-600">{error}</p>}
                         {response && <p className="text-gray-700 whitespace-pre-wrap">{response}</p>}
-                        {mapLinks.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-orange-200">
-                                {mapLinks.map(link => (
-                                    <a key={link.uri} href={link.uri} target="_blank" rel="noopener noreferrer" className="flex items-center text-orange-600 hover:text-orange-800 font-semibold hover:underline mb-2">
-                                        <MapPinIcon />
-                                        <span>{link.title}</span>
-                                    </a>
-                                ))}
-                            </div>
-                        )}
-                        {!isLoading && !error && !response && <p className="text-gray-500 italic">Ask me anything about the menu or our location!</p>}
+                        {!isLoading && !error && !response && <p className="text-gray-500 italic">Ask me anything about the menu!</p>}
                     </div>
                 </div>
             </div>

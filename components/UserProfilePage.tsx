@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import { useCart } from '../contexts/CartContext';
 import { User, Order, MenuItem, OrderType } from '../types';
 import PotatoAvatar from './PotatoAvatar';
@@ -86,28 +85,10 @@ export default function UserProfilePage({ user, onNavigateToMenu }: UserProfileP
             setOrderHistory(storedHistory);
         }
 
-        const generateSpuddyMessage = async () => {
-            setIsLoadingMessage(true);
-            try {
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-                const lastBadge = user.badges.length > 0 ? user.badges[user.badges.length - 1] : null;
-                const prompt = `Generate a short, cheerful, one-sentence greeting from a friendly potato mascot named Spuddy to the user "${user.name}". Keep it under 15 words. Mention one of these facts if available: they have ${user.spudPoints} points, or they recently earned the "${lastBadge}" badge.`;
-                
-                const response = await ai.models.generateContent({
-                  model: 'gemini-2.5-flash',
-                  contents: prompt,
-                });
-                
-                setSpuddyMessage(response.text);
-            } catch (error) {
-                console.error("Failed to generate Spuddy message:", error);
-                setSpuddyMessage(`Welcome back, ${user.name}!`);
-            } finally {
-                setIsLoadingMessage(false);
-            }
-        };
-
-        generateSpuddyMessage();
+        setIsLoadingMessage(true);
+        // Replace AI call with a static message
+        setSpuddyMessage(`Welcome back, ${user.name}! It's great to see you.`);
+        setIsLoadingMessage(false);
 
     }, [user]);
 

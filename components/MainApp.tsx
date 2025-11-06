@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
-import { GoogleGenAI } from '@google/genai';
 import Header from './Header';
 import Footer from './Footer';
 import MenuItemCard from './MenuItemCard';
@@ -74,8 +73,6 @@ const Hero = () => {
 function MenuPage({ 
     onSelectItem, 
     onAskChef, 
-    generatedImages, 
-    isGeneratingImages,
     menuItems,
     dailySpecial,
     isAdmin,
@@ -83,8 +80,6 @@ function MenuPage({
 }: { 
     onSelectItem: (item: MenuItem) => void, 
     onAskChef: () => void,
-    generatedImages: Record<number, string>,
-    isGeneratingImages: boolean,
     menuItems: MenuItem[],
     dailySpecial: DailySpecial,
     isAdmin?: boolean,
@@ -170,8 +165,6 @@ function MenuPage({
                           key={item.id} 
                           item={item} 
                           onSelect={() => onSelectItem(item)}
-                          aiImage={generatedImages[item.id]}
-                          isAiImageLoading={isGeneratingImages && !generatedImages[item.id]}
                           isAdmin={isAdmin}
                           onToggleAvailability={onToggleAvailability}
                           style={{ animationDelay: `${index * 100}ms` }}
@@ -222,9 +215,6 @@ export default function MainApp({ currentUser, onLogout, onUserUpdate, menuItems
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
   const { cartItems, totalPrice, clearCart } = useCart();
-  const [generatedImages, setGeneratedImages] = useState<Record<number, string>>({});
-  const [isGeneratingImages, setIsGeneratingImages] = useState(true);
-  const imageGenerationRan = useRef(false);
   const [newlyEarnedBadge, setNewlyEarnedBadge] = useState<string | null>(null);
 
   // Effect for handling browser back button for the modal
@@ -244,12 +234,6 @@ export default function MainApp({ currentUser, onLogout, onUserUpdate, menuItems
         window.removeEventListener('popstate', onPopState);
     };
 }, [selectedItem]);
-
-  useEffect(() => {
-    // AI image generation has been disabled to prevent API quota errors.
-    // The application will now use the default placeholder images for menu items.
-    setIsGeneratingImages(false);
-  }, []);
 
   const handleReviewSubmit = (itemId: number, review: Review) => {
       const itemToUpdate = menuItems.find(item => item.id === itemId);
@@ -380,7 +364,6 @@ export default function MainApp({ currentUser, onLogout, onUserUpdate, menuItems
         {selectedItem && <MenuItemModal 
             item={selectedItem} 
             onClose={handleCloseModal} 
-            aiImage={selectedItem ? generatedImages[selectedItem.id] : undefined}
             currentUser={currentUser}
             onReviewSubmit={handleReviewSubmit}
             onUpdateMenu={onUpdateMenu}
@@ -393,8 +376,6 @@ export default function MainApp({ currentUser, onLogout, onUserUpdate, menuItems
         {view === 'menu' && <MenuPage 
             onSelectItem={handleSelectItem} 
             onAskChef={() => setIsChefModalOpen(true)}
-            generatedImages={generatedImages}
-            isGeneratingImages={isGeneratingImages}
             menuItems={menuItems}
             dailySpecial={dailySpecial}
             isAdmin={currentUser.isAdmin}
