@@ -160,7 +160,13 @@ export default function MenuItemModal({ item, onClose, aiImage, currentUser, onR
                                                     {category.options.map(option => (
                                                         <label key={option.name} className="flex items-center justify-between cursor-pointer p-2 rounded-md hover:bg-gray-100">
                                                             <div className="flex items-center">
-                                                                <input type={category.type === 'single' ? 'radio' : 'checkbox'} name={category.title} onChange={(e) => handleCustomizationChange(category, option, e.target.checked)} className={`h-4 w-4 ${category.type === 'single' ? 'text-orange-600' : 'rounded text-orange-600'} border-gray-300 focus:ring-orange-500`} />
+                                                                <input
+                                                                    type={category.type === 'single' ? 'radio' : 'checkbox'}
+                                                                    name={category.title}
+                                                                    checked={selectedCustomizations.some(c => c.title === category.title && c.option.name === option.name)}
+                                                                    onChange={(e) => handleCustomizationChange(category, option, e.target.checked)}
+                                                                    className={`h-4 w-4 ${category.type === 'single' ? 'text-orange-600' : 'rounded text-orange-600'} border-gray-300 focus:ring-orange-500`}
+                                                                />
                                                                 <span className="ml-3 text-gray-700">{option.name}</span>
                                                             </div>
                                                             {option.price > 0 && <span className="text-sm text-gray-500">+${option.price.toFixed(2)}</span>}

@@ -171,7 +171,7 @@ export default function CheckoutPage({ onBackToMenu, onPlaceOrder, currentUser, 
                                         </ul>
                                     )}
                                 </div>
-                                <p>${(item.price * item.quantity).toFixed(2)}</p>
+                                <p>${((item.price + (item.selectedCustomizations?.reduce((acc, c) => acc + c.option.price, 0) || 0)) * item.quantity).toFixed(2)}</p>
                             </div>
                         ))}
                     </div>
