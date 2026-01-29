@@ -31,8 +31,7 @@ const getAllOrders = (): (Order & { userEmail: string})[] => {
 const getAllUsers = (): User[] => JSON.parse(localStorage.getItem('users') || '[]');
 
 // --- AnalyticsDashboard ---
-const AnalyticsDashboard = () => {
-    const allOrders = useMemo(getAllOrders, []);
+const AnalyticsDashboard = ({ allOrders }: { allOrders: (Order & { userEmail: string})[] }) => {
     const totalRevenue = allOrders.reduce((sum, order) => sum + order.totalPrice, 0);
     const totalOrders = allOrders.length;
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
@@ -67,8 +66,7 @@ const AnalyticsDashboard = () => {
 };
 
 // --- OrderManagement ---
-const OrderManagement = () => {
-    const allOrders = useMemo(getAllOrders, []);
+const OrderManagement = ({ allOrders }: { allOrders: (Order & { userEmail: string})[] }) => {
     return (
         <div className="bg-white p-6 rounded-lg shadow overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -80,8 +78,8 @@ const OrderManagement = () => {
 };
 
 // --- KitchenDisplay ---
-const KitchenDisplay = () => {
-     const recentOrders = useMemo(() => getAllOrders().slice(0, 10), []);
+const KitchenDisplay = ({ allOrders }: { allOrders: (Order & { userEmail: string})[] }) => {
+     const recentOrders = useMemo(() => allOrders.slice(0, 10), [allOrders]);
      const [orderStatuses, setOrderStatuses] = useState<{ [key: string]: 'new' | 'in_progress' | 'ready' }>({});
      const handleStatusChange = (orderId: string, status: 'new' | 'in_progress' | 'ready') => setOrderStatuses(prev => ({...prev, [orderId]: status}));
      const columns = { new: recentOrders.filter(o => !orderStatuses[o.id] || orderStatuses[o.id] === 'new'), in_progress: recentOrders.filter(o => orderStatuses[o.id] === 'in_progress'), ready: recentOrders.filter(o => orderStatuses[o.id] === 'ready'), };
@@ -234,6 +232,7 @@ interface AdminDashboardProps {
 
 export default function AdminDashboard(props: AdminDashboardProps) {
     const [activeTab, setActiveTab] = useState<AdminTab>('analytics');
+    const allOrders = useMemo(getAllOrders, []);
     
     const tabs: { id: AdminTab; label: string; icon: React.ReactElement }[] = [
         { id: 'analytics', label: 'Analytics', icon: <ChartIcon /> },
@@ -263,9 +262,9 @@ export default function AdminDashboard(props: AdminDashboardProps) {
                     </nav>
                 </aside>
                 <main className="flex-1">
-                    {activeTab === 'analytics' && <AnalyticsDashboard />}
-                    {activeTab === 'orders' && <OrderManagement />}
-                    {activeTab === 'kitchen' && <KitchenDisplay />}
+                    {activeTab === 'analytics' && <AnalyticsDashboard allOrders={allOrders} />}
+                    {activeTab === 'orders' && <OrderManagement allOrders={allOrders} />}
+                    {activeTab === 'kitchen' && <KitchenDisplay allOrders={allOrders} />}
                     {activeTab === 'menu' && <MenuManagement menuItems={menuItems} onUpdateMenu={onUpdateMenu} onAddMenu={onAddMenu} onDeleteMenu={onDeleteMenu} />}
                     {activeTab === 'users' && <UserManagement />}
                     {activeTab === 'promos' && <PromotionsManagement promoCodes={promoCodes} onUpdate={onUpdatePromoCodes} />}
